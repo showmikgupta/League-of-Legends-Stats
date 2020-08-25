@@ -38,16 +38,42 @@ def main():
 	losses = int(ranked_solo_info['losses'])
 	wr = round((wins / (wins + losses)) * 100)
 
+	print("--------------------------")
 	print(summoner_info['name'])
 	print(f'{tier} {rank}: {lp} LP')
 	print(f'Win Rate: {wr}%')
+	print("--------------------------")
 
 	# Get matchlist by account id
 	r = requests.get(f'{Consts.URL["base"]}/match/v{Consts.API_VERSIONS["match"]}/matchlists/by-account/{Consts.ACCOUNT_ID}?api_key={Consts.KEY}')
 
+	if r.status_code != 200:
+		print("There was a problem with your request")
+		sys.exit()
+
 	matchlist = r.json()
 	gameIds = getGameIds(matchlist)
-	print(gameIds)
+	game = gameIds[0]
+
+	# Getting game info from the latest match
+	r = requests.get(f'{Consts.URL["base"]}/match/v{Consts.API_VERSIONS["match"]}/matches/{game}?api_key={Consts.KEY}')
+
+	if r.status_code != 200:
+		print("There was a problem with your request")
+		sys.exit()
+
+	match = r.json()
+
+	# with open('match.json', 'w') as f:
+	# 	json.dump(match, f)
+	
+	# f.close()
+
+	# game duration in minutes
+	gameDuration = int(match['gameDuration']) / 60
+
+	target = getPlayerStats(match, name)
+	printMatchStats(target, gameDuration)
 
 # Returns all the gameIds of the give matches
 def getGameIds(matchlist):
@@ -59,4 +85,44 @@ def getGameIds(matchlist):
 	
 	return gameIds
 
-main()
+# Returns game stats of the given player
+def getPlayerStats(match, name):
+	participantIdentities = match['participantIdentities']
+	participantNo = 0
+	
+	# Getting participant number
+	for participant in participantIdentities:
+		playerInfo = participant['player']
+
+		if playerInfo['summonerName'].lower() == name:
+			participantNo = participant['participantId']
+			break
+	
+	if participantNo == 0:
+		print("Could not find player")
+
+
+	
+	target = match['participants'][participantNo - 1]
+	return target
+
+def printMatchStats(target, gameDuration):
+	print("Previous Match Stats:")
+
+	stats = target['stats']
+	cs = int(stats['totalMinionsKilled'])
+	csPerMin = round(cs / gameDuration, 1)
+	damageDealt = int(stats['totalDamageDealtToChampions'])
+	goldEarned = int(stats['goldEarned'])
+	visionScore = int(stats['visionScore'])
+	controlWardsBought = int(stats['visionWardsBoughtInGame'])
+
+	print(f"CS/Min: {csPerMin}")
+	print(f"Damage Dealth: {damageDealt}")
+	print(f"Gold Earned: {goldEarned}")
+	print(f"Vision Score: {visionScore}")
+	print(f"Control Wards Bought: {controlWardsBought}")
+	print("--------------------------")
+
+
+main() 
