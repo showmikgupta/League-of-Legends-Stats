@@ -2,13 +2,16 @@ import requests
 import sys
 import json
 import RiotConsts as Consts
+import Key
 
 def main():
+	championCodes = generateChampionCodes(Consts.CHAMPION_LIST_URL)
+
 	# Get Summoner Name
 	name = input("Enter Summoner Name: ")
 
 	# Request for summoner info
-	r = requests.get(f'{Consts.URL["base"]}/summoner/v{Consts.API_VERSIONS["summoner"]}/summoners/by-name/{name}?api_key={Consts.KEY}')
+	r = requests.get(f'{Consts.URL["base"]}/summoner/v{Consts.API_VERSIONS["summoner"]}/summoners/by-name/{name}?api_key={Key.KEY}')
 
 	if r.status_code != 200:
 		print("There was a problem with your request")
@@ -19,7 +22,7 @@ def main():
 	account_id = summoner_info['accountId']
 
 	# Get basic ranked info
-	r = requests.get(f'{Consts.URL["base"]}/league/v{Consts.API_VERSIONS["league"]}/entries/by-summoner/{summoner_id}?api_key={Consts.KEY}')
+	r = requests.get(f'{Consts.URL["base"]}/league/v{Consts.API_VERSIONS["league"]}/entries/by-summoner/{summoner_id}?api_key={Key.KEY}')
 
 	if r.status_code != 200:
 		print("There was a problem with your request")
@@ -45,7 +48,7 @@ def main():
 	print("--------------------------")
 
 	# Get matchlist by account id
-	r = requests.get(f'{Consts.URL["base"]}/match/v{Consts.API_VERSIONS["match"]}/matchlists/by-account/{Consts.ACCOUNT_ID}?api_key={Consts.KEY}')
+	r = requests.get(f'{Consts.URL["base"]}/match/v{Consts.API_VERSIONS["match"]}/matchlists/by-account/{Consts.ACCOUNT_ID}?api_key={Key.KEY}')
 
 	if r.status_code != 200:
 		print("There was a problem with your request")
@@ -56,7 +59,7 @@ def main():
 	game = gameIds[0]
 
 	# Getting game info from the latest match
-	r = requests.get(f'{Consts.URL["base"]}/match/v{Consts.API_VERSIONS["match"]}/matches/{game}?api_key={Consts.KEY}')
+	r = requests.get(f'{Consts.URL["base"]}/match/v{Consts.API_VERSIONS["match"]}/matches/{game}?api_key={Key.KEY}')
 
 	if r.status_code != 200:
 		print("There was a problem with your request")
@@ -73,7 +76,7 @@ def main():
 	gameDuration = int(match['gameDuration']) / 60
 
 	target = getPlayerStats(match, name)
-	printMatchStats(target, gameDuration)
+	printMatchStats(target, gameDuration, championCodes)
 
 # Returns all the gameIds of the give matches
 def getGameIds(matchlist):
@@ -93,8 +96,8 @@ def getPlayerStats(match, name):
 	# Getting participant number
 	for participant in participantIdentities:
 		playerInfo = participant['player']
-
-		if playerInfo['summonerName'].lower() == name:
+		
+		if playerInfo['summonerName'].lower() == name.lower():
 			participantNo = participant['participantId']
 			break
 	
@@ -103,20 +106,28 @@ def getPlayerStats(match, name):
 
 
 	
-	target = match['participants'][participantNo - 1]
-	return target
+	return match['participants'][participantNo - 1]
 
-def printMatchStats(target, gameDuration):
+def printMatchStats(target, gameDuration, championCodes):
 	print("Previous Match Stats:")
 
 	stats = target['stats']
-	cs = int(stats['totalMinionsKilled'])
-	csPerMin = round(cs / gameDuration, 1)
+	minionsKilled = int(stats['totalMinionsKilled'])
+	neutralMinionsKilled = int(stats['neutralMinionsKilled'])
+	totalMinionsKilled = minionsKilled + neutralMinionsKilled
+	csPerMin = round(totalMinionsKilled / gameDuration, 1)
 	damageDealt = int(stats['totalDamageDealtToChampions'])
 	goldEarned = int(stats['goldEarned'])
 	visionScore = int(stats['visionScore'])
 	controlWardsBought = int(stats['visionWardsBoughtInGame'])
+	championPlayed = ""
 
+	for champion in championCodes:
+		if target['championId'] == int(champion):
+			championPlayed = championCodes[champion]
+			break
+
+	print(f"Champion: {championPlayed}")
 	print(f"CS/Min: {csPerMin}")
 	print(f"Damage Dealth: {damageDealt}")
 	print(f"Gold Earned: {goldEarned}")
@@ -124,5 +135,16 @@ def printMatchStats(target, gameDuration):
 	print(f"Control Wards Bought: {controlWardsBought}")
 	print("--------------------------")
 
+def generateChampionCodes(url):
+	with open('champion.json') as jsonFile:
+		championData = json.load(jsonFile)
+	
+	championIds = {}
+	championInfo = championData['data']
+
+	for champion in championInfo:
+		championIds[championInfo[champion]['key']] = champion
+	
+	return championIds
 
 main() 
