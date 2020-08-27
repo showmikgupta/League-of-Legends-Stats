@@ -12,6 +12,6 @@ API_VERSIONS = {
 	'match': '4'
 }
 
-KEY = 'RGAPI-a9724c55-2f67-4dae-a3a7-e4ffef21d621'
+CHAMPION_LIST_URL = 'http://ddragon.leagueoflegends.com/cdn/10.16.1/data/en_US/champion.json'
 
 ACCOUNT_ID = 'oHdDIQCxW5lqiFZARK803O4wi1gmRgsxw4sLK5Cgzxx5424'
